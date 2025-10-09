@@ -1,0 +1,221 @@
+% import { Injectable, UnauthorizedException } from '@nestjs/common';
+% import { JwtService } from '@nestjs/jwt';
+% import { UsersService } from '../users/users.service.js';
+% import * as bcrypt from 'bcrypt';
+% import { CreateUserDto } from '../users/dto/create-user.dto.js';
+% import { LoginDto } from './dto/login.dto.js';
+% // import { User } from '../users/entities/user.entity.js';
+
+% @Injectable()
+% export class AuthService {
+%   constructor(
+%     private usersService: UsersService,
+%     private jwtService: JwtService,
+%   ) {}
+%   async validateUser(loginDto: LoginDto) {
+%     const { email, password } = loginDto;
+%     const user = await this.usersService.findByEmailWithoutActiveFilter(email);
+%     if (!user) {
+%       throw new UnauthorizedException("User email doesn't exist");
+%     }
+
+%     if (!user.isActive) {
+%       throw new UnauthorizedException('User is deactivated');
+%     }
+
+%     const isMatch = await bcrypt.compare(password, user.password);
+%     if (!isMatch) {
+%       throw new UnauthorizedException('Invalid password');
+%     }
+
+%     const payload = {
+%       email: user.email,
+%       sub: user.userId,
+%       role: user.role,
+%       isAdmin: user.isAdmin,
+%     };
+
+%     return {
+%       access_token: this.jwtService.sign(payload),
+%     };
+%   }
+%   async signup(createUserDto: CreateUserDto) {
+%     return this.usersService.create(createUserDto);
+%   }
+%   async login(loginDto: LoginDto) {
+%     return this.validateUser(loginDto);
+%   }
+
+%   async changePassword(
+%     userId: string,
+%     email: string,
+%     currentPassword: string,
+%     newPassword: string,
+%   ): Promise<void> {
+%     const user = await this.usersService.findOne(userId, email);
+
+%     const isPasswordValid = await bcrypt.compare(
+%       currentPassword,
+%       user.password,
+%     );
+%     if (!isPasswordValid) {
+%       throw new UnauthorizedException('Current password is incorrect');
+%     }
+
+%     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+%     await this.usersService.update(userId, email, {
+%       userId,
+%       password: hashedNewPassword,
+%     });
+%   }
+
+%   async deactivateAccount(
+%     userId: string,
+%     email: string,
+%     password: string,
+%   ): Promise<void> {
+%     const user = await this.usersService.findOne(userId, email);
+
+%     const isPasswordValid = await bcrypt.compare(password, user.password);
+%     if (!isPasswordValid) {
+%       throw new UnauthorizedException('Password is incorrect');
+%     }
+
+%     await this.usersService.update(userId, email, {
+%       userId,
+%       isActive: false,
+%     });
+%   }
+% }
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Allocation } from './entities/allocation.entity';
+import { Client } from '../client/entities/client.entity';
+import { Property } from '../properties/entities/property.entity';
+import { validate as isValidUUID } from 'uuid';
+import { v4 as uuidv4 } from 'uuid';
+
+@Injectable()
+export class AllocationService {
+  constructor(
+    @InjectRepository(Allocation)
+    private allocationRepository: Repository<Allocation>,
+    @InjectRepository(Property)
+    private propertyRepository: Repository<Property>,
+    @InjectRepository(Client)
+    private clientRepository: Repository<Client>,
+  ) {}
+
+  /**
+   * Creates multiple random allocations
+   * @param count Number of allocations to create
+   * @returns Array of created allocations
+   */
+  async createRandomAllocations(count: number): Promise<Allocation[]> {
+    if (!Number.isInteger(count) || count < 1) {
+      throw new BadRequestException('Count must be a positive integer');
+    }
+
+    const queryRunner = this.allocationRepository.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Fetch all active clients in one go
+      const clients = await queryRunner.manager
+        .createQueryBuilder(Client, 'client')
+        .setLock('pessimistic_write')
+        .where('client.isActive = :isActive', { isActive: true })
+        .orderBy('RANDOM()')
+        .limit(count)
+        .getMany();
+
+      if (clients.length === 0) {
+        throw new NotFoundException('No active clients found');
+      }
+      if (clients.length < count) {
+        throw new BadRequestException(`Only ${clients.length} active clients available, requested ${count}`);
+      }
+
+      // Fetch properties
+      const properties = await queryRunner.manager
+        .createQueryBuilder(Property, 'property')
+        .setLock('pessimistic_write')
+        .orderBy('RANDOM()')
+        .limit(count)
+        .getMany();
+
+      if (properties.length === 0) {
+        throw new NotFoundException('No properties found');
+      }
+      if (properties.length < count) {
+        throw new BadRequestException(`Only ${properties.length} properties available, requested ${count}`);
+      }
+
+      const allocations: Allocation[] = [];
+      const propertyRoomMap = new Map<string, number[]>();
+
+      // Initialize available rooms for each property
+      for (const property of properties) {
+        const allocatedRooms = await queryRunner.manager
+          .createQueryBuilder(Allocation, 'allocation')
+          .select('allocation.roomNo')
+          .where('allocation.propertyId = :propertyId', { propertyId: property.propertyId })
+          .getRawMany();
+
+        const allocatedRoomNumbers = allocatedRooms.map((alloc) => alloc.roomNo);
+        const availableRooms = Array.from({ length: property.numberOfRooms }, (_, i) => i + 1).filter(
+          (room) => !allocatedRoomNumbers.includes(room),
+        );
+
+        if (availableRooms.length === 0) {
+          throw new BadRequestException(`No available rooms for property ${property.propertyId}`);
+        }
+
+        propertyRoomMap.set(property.propertyId, availableRooms);
+      }
+
+      // Create allocations
+      for (let i = 0; i < count; i++) {
+        const client = clients[i];
+        const property = properties[i];
+
+        const availableRooms = propertyRoomMap.get(property.propertyId);
+        if (!availableRooms || availableRooms.length === 0) {
+          throw new BadRequestException(`No available rooms for property ${property.propertyId}`);
+        }
+
+        const roomNo = availableRooms.shift(); // Take the first available room
+        const allocationId = uuidv4();
+
+        if (!isValidUUID(allocationId)) {
+          throw new BadRequestException('Invalid UUID generated');
+        }
+
+        const allocation = this.allocationRepository.create({
+          allocationId,
+          propertyId: property.propertyId,
+          customerId: client.clientId,
+          roomNo,
+          address: property.address,
+          block: property.block,
+          note: `Random allocation for ${client.fullName}`,
+          createAt: new Date(),
+        });
+
+        allocations.push(allocation);
+      }
+
+      // Save all allocations
+      const savedAllocations = await queryRunner.manager.save(Allocation, allocations);
+      await queryRunner.commitTransaction();
+      return savedAllocations;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+}
