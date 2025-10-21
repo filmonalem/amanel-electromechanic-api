@@ -45,6 +45,10 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+        "types": ["node", "express", "multer"],
+    "esModuleInterop": true,
+
   }
+ 
 }

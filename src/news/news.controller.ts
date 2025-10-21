@@ -27,10 +27,8 @@ import { NewsService } from './news.service';
 import { CreateNewsDto } from './dto/create-news.dto';
 import { UpdateNewsDto } from './dto/update-news.dto';
 import { News } from './entities/news.entity';
-import { UserRole } from '../users/enums/user-role.enum';
 import { JwtAuthGuard } from '../authentication/jwt-auth.guard';
 import { RolesGuard } from '../authentication/roles.guard';
-import { Roles } from '../authentication/decorators/roles.decorator';
 import { MulterService } from '../utility/multer';
 
 @ApiTags('News')
