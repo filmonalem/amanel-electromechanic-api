@@ -1,32 +1,3 @@
-// {
-//   "compilerOptions": {
-//     "module": "commonjs",
-//     "declaration": true,
-//     "removeComments": true,
-//     "emitDecoratorMetadata": true,
-//     "experimentalDecorators": true,
-//     "allowSyntheticDefaultImports": true,
-//     "esModuleInterop": true,
-//     "target": "ES2021",
-//     "lib": ["ES2021"],
-//     "sourceMap": true,
-//     "outDir": "./dist",
-//     "rootDir": "./src",
-//     "baseUrl": "./",
-//     "incremental": true,
-//     "skipLibCheck": true,
-//     "strict": true,
-//     "strictNullChecks": true,
-//     "strictPropertyInitialization": false,
-//     "noImplicitAny": false,
-//     "forceConsistentCasingInFileNames": true,
-//     "noFallthroughCasesInSwitch": true,
-//     "resolveJsonModule": true,
-//     "noUncheckedIndexedAccess": true
-//   },
-//   "include": ["src/**/*.ts"],
-//   "exclude": ["node_modules", "dist", "test", "**/*.spec.ts", "**/*.test.ts"]
-// }
 {
   "compilerOptions": {
     "module": "commonjs",
