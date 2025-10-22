@@ -33,10 +33,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
           return {
             type: 'postgres',
             host:
-              configService.get('DB_HOST') ||
-              'dpg-cqj8l8unttvs73bkjvv0-a.oregon-postgres.render.com',
+              'RZDTwxhmeGAJQecFdGMlkTfzWRRSZDjp',
             port: configService.get<number>('DB_PORT') || 5432,
-            username: configService.get('DB_USERNAME') || 'Philmon',
+            username: configService.get('DB_USERNAME') || 'postgres',
             password: configService.get('DB_PASSWORD') || 'f3451146',
             database: configService.get('DB_NAME') || 'loop',
             entities: [__dirname + '/../**/*.entity{.ts,.js}'],
