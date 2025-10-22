@@ -32,11 +32,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         } else {
           return {
             type: 'postgres',
-            host:
-              'RZDTwxhmeGAJQecFdGMlkTfzWRRSZDjp',
+            host: 'containers-us-west-12.railway.app',
             port: configService.get<number>('DB_PORT') || 5432,
             username: configService.get('DB_USERNAME') || 'postgres',
-            password: configService.get('DB_PASSWORD') || 'f3451146',
+            password: 'RZDTwxhmeGAJQecFdGMlkTfzWRRSZDjp  ',
             database: configService.get('DB_NAME') || 'loop',
             entities: [__dirname + '/../**/*.entity{.ts,.js}'],
             synchronize: configService.get('NODE_ENV') !== 'production',
