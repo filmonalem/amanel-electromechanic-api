@@ -4,51 +4,51 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }), // ✅ ensures .env is loaded
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
-        const databaseUrl = configService.get('DATABASE_URL');
+        const databaseUrl = configService.get<string>('DATABASE_URL');
+
+        // ✅ Option 1: Use DATABASE_URL if available
         if (databaseUrl) {
-          const parsedUrl = new URL(databaseUrl);
+          const parsed = new URL(databaseUrl);
           return {
             type: 'postgres',
-            host: parsedUrl.hostname,
-            port: parsedUrl.port ? parseInt(parsedUrl.port) : 5432,
-            username: parsedUrl.username,
-            password: parsedUrl.password,
-            database: parsedUrl.pathname.split('/')[1],
+            host: parsed.hostname,
+            port: parseInt(parsed.port) || 5432,
+            username: parsed.username,
+            password: parsed.password,
+            database: parsed.pathname.replace('/', ''),
             entities: [__dirname + '/../**/*.entity{.ts,.js}'],
             synchronize: configService.get('NODE_ENV') !== 'production',
             ssl: { rejectUnauthorized: false },
             extra: {
-              max: 20,
-              idleTimeoutMillis: 30000,
-              connectionTimeoutMillis: 2000,
+              connectionTimeoutMillis: 10000,
             },
-            retryAttempts: 5,
-            retryDelay: 3000,
-          };
-        } else {
-          return {
-            type: 'postgres',
-            host: 'containers-us-west-12.railway.app',
-            port: configService.get<number>('DB_PORT') || 5432,
-            username: configService.get('DB_USERNAME') || 'postgres',
-            password: 'RZDTwxhmeGAJQecFdGMlkTfzWRRSZDjp  ',
-            database: configService.get('DB_NAME') || 'loop',
-            entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-            synchronize: configService.get('NODE_ENV') !== 'production',
-            ssl: { rejectUnauthorized: false },
-            extra: {
-              max: 20,
-              idleTimeoutMillis: 30000,
-              connectionTimeoutMillis: 2000,
-            },
-            retryAttempts: 5,
-            retryDelay: 3000,
+            retryAttempts: 10,
+            retryDelay: 5000,
           };
         }
+
+        // ✅ Option 2: Fallback if DATABASE_URL not defined
+        return {
+          type: 'postgres',
+          host: configService.get('DB_HOST'),
+          port: configService.get<number>('DB_PORT') || 5432,
+          username: configService.get('DB_USERNAME'),
+          password: configService.get('DB_PASSWORD'),
+          database: configService.get('DB_NAME'),
+          entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+          synchronize: configService.get('NODE_ENV') !== 'production',
+          ssl: { rejectUnauthorized: false },
+          extra: {
+            connectionTimeoutMillis: 10000,
+          },
+          retryAttempts: 10,
+          retryDelay: 5000,
+        };
       },
     }),
   ],
