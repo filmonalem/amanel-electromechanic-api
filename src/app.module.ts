@@ -36,6 +36,6 @@ import { NewsModule } from './news/news.module';
     NewsModule,
   ],
   controllers: [AppController],
-  providers: [AppService], 
+  providers: [AppService],
 })
 export class AppModule {}
