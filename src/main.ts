@@ -54,6 +54,8 @@ app.useStaticAssets(join(__dirname, '..', 'Uploads'), {
     process.exit(1);
   });
 
-  await app.listen(3004);
-}
+ await app.init(); // ✅ ensures DB + entities ready
+
+
+  await app.listen(process.env.PORT || 3000);}
 bootstrap();

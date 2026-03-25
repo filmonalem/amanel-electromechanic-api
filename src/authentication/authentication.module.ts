@@ -14,12 +14,16 @@ import { MailModule } from '../mail/mail.module';
     PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-        signOptions: {
-          expiresIn: '1d',
-        },
-      }),
+      useFactory: async (configService: ConfigService) => {
+        console.log('JWT_SECRET:', configService.get('JWT_SECRET')); // 👈 add this
+
+        return {
+          secret: configService.get<string>('JWT_SECRET'),
+          signOptions: {
+            expiresIn: '1d',
+          },
+        };
+      },
     }),
     MailModule,
   ],
@@ -27,4 +31,4 @@ import { MailModule } from '../mail/mail.module';
   providers: [AuthService, JwtStrategy],
   exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }

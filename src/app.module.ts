@@ -9,10 +9,10 @@ import { SeederModule } from './seeders/seeder.module';
 import { RateLimiterModule } from 'nestjs-rate-limiter';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-import { DatabaseModule } from './database/database.module';
 import { LicenseModule } from './license/license.module';
 import { ContactModule } from './contact/contact.module';
 import { NewsModule } from './news/news.module';
+import { DatabaseModule } from './database/database';
 
 @Module({
   imports: [
