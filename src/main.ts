@@ -27,7 +27,7 @@ app.useGlobalFilters(new AllExceptionsFilter());
   );
 
  
-app.useStaticAssets(join(__dirname, '..', 'Uploads'), {
+app.useStaticAssets(join(__dirname, '..', 'uploads'), {
   prefix: '/uploads/',
 });
 
